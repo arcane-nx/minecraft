@@ -12,6 +12,56 @@
 		<meta property="og:description" content="Play minecraft 1.8 in your browser" />
 		<meta property="og:image" content="favicon.png" />
 		<link type="image/png" rel="shortcut icon" href="favicon.png" />
+		<link rel="manifest" href="manifest.json" />
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+		<meta name="apple-mobile-web-app-title" content="Eaglercraft" />
+		<link rel="apple-touch-icon" href="favicon.png" />
+		<style>
+			#fullscreen-btn {
+				position: fixed;
+				top: 15px;
+				right: 15px;
+				width: 48px;
+				height: 48px;
+				border-radius: 12px;
+				background: rgba(20, 20, 20, 0.6);
+				backdrop-filter: blur(8px);
+				-webkit-backdrop-filter: blur(8px);
+				border: 1px solid rgba(255, 255, 255, 0.15);
+				color: #ffffff;
+				cursor: pointer;
+				display: none;
+				align-items: center;
+				justify-content: center;
+				z-index: 99999;
+				transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+				box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+				outline: none;
+				-webkit-tap-highlight-color: transparent;
+			}
+			#fullscreen-btn svg {
+				width: 24px;
+				height: 24px;
+				fill: currentColor;
+				transition: transform 0.2s ease;
+			}
+			#fullscreen-btn:hover {
+				background: rgba(40, 40, 40, 0.8);
+				border-color: rgba(255, 255, 255, 0.3);
+				transform: scale(1.05);
+				box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4), 0 0 8px rgba(255, 255, 255, 0.1);
+			}
+			#fullscreen-btn:active {
+				transform: scale(0.95);
+				background: rgba(10, 10, 10, 0.9);
+			}
+			@media (pointer: coarse), (max-width: 1024px) {
+				#fullscreen-btn {
+					display: flex;
+				}
+			}
+		</style>
 		<script type="text/javascript" src="bootstrap.js"></script>
 		<script type="text/javascript">
 			"use strict";
@@ -19,6 +69,12 @@
 				if(window.location.href.indexOf("file:") === 0) {
 					alert("HTTP please, do not open this file locally, run a local HTTP server and load it via HTTP");
 				}else {
+					// Register Service Worker for PWA (Add to Home Screen)
+					if ('serviceWorker' in navigator) {
+						navigator.serviceWorker.register('./sw.js').catch(function(err) {
+							console.warn('ServiceWorker registration failed: ', err);
+						});
+					}
 					
 					// %%%%%%%%% launch options %%%%%%%%%%%%
 					
@@ -48,10 +104,78 @@
 					}
 					
 					main();
-					
+
+					// Fullscreen Toggle Logic
+					var btn = document.getElementById('fullscreen-btn');
+					var iconEnter = btn.querySelector('.icon-enter');
+					var iconExit = btn.querySelector('.icon-exit');
+
+					function updateFullscreenUI() {
+						var isFullscreen = document.fullscreenElement || 
+											document.webkitFullscreenElement || 
+											document.mozFullScreenElement || 
+											document.msFullscreenElement;
+						if (isFullscreen) {
+							iconEnter.style.display = 'none';
+							iconExit.style.display = 'block';
+							// Request landscape lock on mobile
+							if (screen.orientation && screen.orientation.lock) {
+								screen.orientation.lock('landscape').catch(function(e) {
+									console.log("Orientation lock not supported or failed:", e);
+								});
+							}
+						} else {
+							iconEnter.style.display = 'block';
+							iconExit.style.display = 'none';
+						}
+					}
+
+					btn.addEventListener('click', function() {
+						if (!document.fullscreenElement &&
+							!document.webkitFullscreenElement && 
+							!document.mozFullScreenElement && 
+							!document.msFullscreenElement) {
+							
+							var docEl = document.documentElement;
+							if (docEl.requestFullscreen) {
+								docEl.requestFullscreen();
+							} else if (docEl.webkitRequestFullscreen) {
+								docEl.webkitRequestFullscreen();
+							} else if (docEl.mozRequestFullScreen) {
+								docEl.mozRequestFullScreen();
+							} else if (docEl.msRequestFullscreen) {
+								docEl.msRequestFullscreen();
+							}
+						} else {
+							if (document.exitFullscreen) {
+								document.exitFullscreen();
+							} else if (document.webkitExitFullscreen) {
+								document.webkitExitFullscreen();
+							} else if (document.mozCancelFullScreen) {
+								document.mozCancelFullScreen();
+							} else if (document.msExitFullscreen) {
+								document.msExitFullscreen();
+							}
+						}
+					});
+
+					document.addEventListener('fullscreenchange', updateFullscreenUI);
+					document.addEventListener('webkitfullscreenchange', updateFullscreenUI);
+					document.addEventListener('mozfullscreenchange', updateFullscreenUI);
+					document.addEventListener('MSFullscreenChange', updateFullscreenUI);
 				}
 			});
 		</script>
 	</head>
-	<body style="margin:0px;width:100%;height:100%;overflow:hidden;background-color:black;" id="game_frame"></body>
+	<body style="margin:0px;width:100%;height:100%;overflow:hidden;background-color:black;">
+		<div id="game_frame" style="width:100%;height:100%;"></div>
+		<button id="fullscreen-btn" aria-label="Toggle Fullscreen">
+			<svg class="icon-enter" viewBox="0 0 24 24">
+				<path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+			</svg>
+			<svg class="icon-exit" viewBox="0 0 24 24" style="display: none;">
+				<path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/>
+			</svg>
+		</button>
+	</body>
 </html>
